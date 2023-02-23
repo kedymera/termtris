@@ -1,6 +1,9 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <ncurses.h>
 #include <string.h>
+#include <time.h>
+#include "tetromino.c"
 
 #define FIELDWIDTH 10
 #define FIELDHEIGHT 22
@@ -19,6 +22,7 @@ void mvaddch_into_field(int y, int x, char c) {
 void draw_field() {
     int i, j;
 
+    attron(COLOR_PAIR(8));
     // walls
     for (i = 0; i < FIELDHEIGHT + 2; ++i) {
         mvaddch(i, 0, '|');
@@ -37,29 +41,51 @@ void draw_field() {
     }
 }
 
+void draw_tetromino(int tetromino_type, int tetromino_x, int tetromino_y) {
+    attron(COLOR_PAIR(tetromino_type + 1));
+    mvaddch_into_field(tetromino_y, tetromino_x, '#');
+}
+
 int main() {
     // init ncurses
     initscr();
+    start_color();
+    curs_set(0);
     halfdelay(10);
     noecho();
+    time_t t;
+    srand(time(&t));
     
     init_game();
 
-    int x = 0, y = 0;    
+    for (int i = 0; i < 7; ++i) {
+        init_pair(i + 1, COLOR_BLACK, TETROMINOCOLOURS[i]);
+    }
+    init_pair(8, COLOR_WHITE, COLOR_BLACK);
+
+    int tetromino_type = -1;
+    int tetromino_x, tetromino_y;
     bool gaming = true;
     while (gaming) {
+        if (tetromino_type < 0) {
+            tetromino_type = rand() % 7;
+            tetromino_x = tetromino_type;
+            tetromino_y = 0;
+        }
+
         clear();
         draw_field();
-        mvaddch_into_field(y, x, 'o');
+        draw_tetromino(tetromino_type, tetromino_x, tetromino_y);
+        refresh();
 
-        y = (y + FALLSPEED) % FIELDHEIGHT;
+        tetromino_y = (tetromino_y + FALLSPEED) % FIELDHEIGHT;
 
         switch (getch()) {
             case 'a':
-                if (x > 0) --x;
+                if (tetromino_x > 0) --tetromino_x;
                 break;
             case 'd':
-                if (x < FIELDWIDTH - 1) ++x;
+                if (tetromino_x < FIELDWIDTH - 1) ++tetromino_x;
                 break;
             case 'q':
                 gaming = false;
