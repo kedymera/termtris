@@ -48,9 +48,25 @@ void draw_field() {
 }
 
 void get_field_coords_for_part(int *field_x, int *field_y, int tetromino_type, int tetromino_x, int tetromino_y, int tetromino_rot, int i) {
-    (void) tetromino_rot;
-    *field_x = tetromino_x + TETROMINOSHAPES[tetromino_type][i][0];
-    *field_y = tetromino_y + TETROMINOSHAPES[tetromino_type][i][1];
+    switch (tetromino_rot) {
+        default:
+        case 0:
+            *field_x = tetromino_x + TETROMINOSHAPES[tetromino_type][i][0];
+            *field_y = tetromino_y + TETROMINOSHAPES[tetromino_type][i][1];
+            break;
+        case 1:
+            *field_x = tetromino_x - TETROMINOSHAPES[tetromino_type][i][1];
+            *field_y = tetromino_y + TETROMINOSHAPES[tetromino_type][i][0];
+            break;
+        case 2:
+            *field_x = tetromino_x - TETROMINOSHAPES[tetromino_type][i][0];
+            *field_y = tetromino_y - TETROMINOSHAPES[tetromino_type][i][1];
+            break;
+        case 3:
+            *field_x = tetromino_x + TETROMINOSHAPES[tetromino_type][i][1];
+            *field_y = tetromino_y - TETROMINOSHAPES[tetromino_type][i][0];
+            break;
+    }
 }
 
 void draw_tetromino(int tetromino_type, int tetromino_x, int tetromino_y, int tetromino_rot) {
@@ -178,6 +194,9 @@ int main() {
                 break;
             case 'd':
                 tetromino_x += move_horiz(+1, tetromino_type, tetromino_x, tetromino_y, tetromino_rot);
+                break;
+            case 'w':
+                tetromino_rot = (tetromino_rot + 1) % 4;
                 break;
             case 'q':
                 gaming = false;
