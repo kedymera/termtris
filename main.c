@@ -147,6 +147,18 @@ int move_down(int tetromino_type, int tetromino_x, int tetromino_y, int tetromin
     return 1;
 }
 
+int rotate(int tetromino_type, int tetromino_x, int tetromino_y, int tetromino_rot) {
+    int new_rot = (tetromino_rot + 1) % 4;
+    // no need to check (0, 0) square
+    for (int i = 0; i < 3; ++i) {
+        int x, y;
+        get_field_coords_for_part(&x, &y, tetromino_type, tetromino_x, tetromino_y, new_rot, i);
+        if (x < 0 || x >= FIELDWIDTH || y < 0 || y >= FIELDHEIGHT)
+            return tetromino_rot;
+    }
+    return new_rot;
+}
+
 int main() {
     // init ncurses
     initscr();
@@ -196,7 +208,7 @@ int main() {
                 tetromino_x += move_horiz(+1, tetromino_type, tetromino_x, tetromino_y, tetromino_rot);
                 break;
             case 'w':
-                tetromino_rot = (tetromino_rot + 1) % 4;
+                tetromino_rot = rotate(tetromino_type, tetromino_x, tetromino_y, tetromino_rot);
                 break;
             case 'q':
                 gaming = false;
