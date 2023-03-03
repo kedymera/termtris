@@ -47,12 +47,22 @@ void draw_field() {
     }
 }
 
+void get_field_coords_tetromino_block(int *field_x, int *field_y, int tetromino_type, int tetromino_x, int tetromino_y, int tetromino_rot, int i, int j) {
+    (void) tetromino_type;
+    (void) tetromino_rot;
+    *field_x = tetromino_x + i;
+    *field_y = tetromino_y + j;
+}
+
 void draw_tetromino(int tetromino_type, int tetromino_x, int tetromino_y) {
     attron(COLOR_PAIR(tetromino_type + 1));
     for (int i = 0; i < 4; ++i)
         for (int j = 0; j < 4; ++j)
-            if (TETROMINOSHAPES[tetromino_type][i][j] == '#')
-                mvaddch_into_field(tetromino_y + j, tetromino_x + i, '#');
+            if (TETROMINOSHAPES[tetromino_type][i][j] == '#') {
+                int fx, fy;
+                get_field_coords_tetromino_block(&fx, &fy, tetromino_type, tetromino_x, tetromino_y, 0, i, j);
+                mvaddch_into_field(fy, fx, '#');
+            }
 
 }
 
@@ -86,32 +96,38 @@ void solidify(int tetromino_type, int tetromino_x, int tetromino_y) {
     for (int i = 0; i < 4; ++i)
         for (int j = 0; j < 4; ++j)
             if (TETROMINOSHAPES[tetromino_type][i][j] == '#') {
-                FIELD[tetromino_x + i][tetromino_y + j] = '#';
-                FIELDCOLOUR[tetromino_x + i][tetromino_y + j] = tetromino_type + 1;
+                int fx, fy;
+                get_field_coords_tetromino_block(&fx, &fy, tetromino_type, tetromino_x, tetromino_y, 0, i, j);
+                FIELD[fx][fy] = '#';
+                FIELDCOLOUR[fx][fy] = tetromino_type + 1;
             }
     clear_complete_lines();
 }
 
 void move_horiz(int amt, int tetromino_type, int *tetromino_x, int tetromino_y) {
     for (int i = 0; i < 4; ++i)
-        for (int j = 0; j < 4; ++j)
+        for (int j = 0; j < 4; ++j) {
+            int fx, fy;
+            get_field_coords_tetromino_block(&fx, &fy, tetromino_type, *tetromino_x + amt, tetromino_y, 0, i, j);
             if (TETROMINOSHAPES[tetromino_type][i][j] == '#' &&
-                ((*tetromino_x + i + amt < 0 && *tetromino_x + i + amt >= FIELDWIDTH) ||
-                    FIELD[*tetromino_x + i + amt][tetromino_y + j] != EMPTYCHAR))
+                ((fx < 0 && fx >= FIELDWIDTH) || FIELD[fx][fy] != EMPTYCHAR))
                 // collision!; don't move
                 return;
+        }
     *tetromino_x += amt;
 }
 
 bool move_down(int tetromino_type, int tetromino_x, int *tetromino_y) {
     for (int i = 0; i < 4; ++i)
-        for (int j = 0; j < 4; ++j)
+        for (int j = 0; j < 4; ++j) {
+            int fx, fy;
+            get_field_coords_tetromino_block(&fx, &fy, tetromino_type, tetromino_x, *tetromino_y + 1, 0, i, j);
             if (TETROMINOSHAPES[tetromino_type][i][j] == '#' &&
-                (*tetromino_y + j + 1 >= FIELDHEIGHT ||
-                    FIELD[tetromino_x + i][*tetromino_y + j + 1] != EMPTYCHAR)) {
+                (fy >= FIELDHEIGHT || FIELD[fx][fy] != EMPTYCHAR)) {
                 solidify(tetromino_type, tetromino_x, *tetromino_y);
                 return true;
             }
+        }
     ++*tetromino_y;
     return false;
 }
