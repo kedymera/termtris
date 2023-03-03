@@ -5,6 +5,9 @@
 #include <time.h>
 #include "tetromino.c"
 
+typedef uint8_t u8;
+typedef int8_t i8;
+
 #define FIELDWIDTH 10
 #define FIELDHEIGHT 22
 #define EMPTYCHAR '~'
@@ -14,6 +17,13 @@
 char FIELD[FIELDWIDTH][FIELDHEIGHT];
 char FIELDCOLOUR[FIELDWIDTH][FIELDHEIGHT];
 int score = 0;
+
+struct Tetromino {
+    u8 type;
+    i8 x;
+    i8 y;
+    u8 rot;
+};
 
 void init_game() {
     memset(FIELD, EMPTYCHAR, FIELDWIDTH * FIELDHEIGHT);
@@ -47,34 +57,34 @@ void draw_field() {
     }
 }
 
-void get_field_coords_for_part(int *field_x, int *field_y, int tetromino_type, int tetromino_x, int tetromino_y, int tetromino_rot, int i) {
-    switch (tetromino_rot) {
+void get_field_coords_for_part(int *field_x, int *field_y, struct Tetromino tt, int i) {
+    switch (tt.rot) {
         default:
         case 0:
-            *field_x = tetromino_x + TETROMINOSHAPES[tetromino_type][i][0];
-            *field_y = tetromino_y + TETROMINOSHAPES[tetromino_type][i][1];
+            *field_x = tt.x + TETROMINOSHAPES[tt.type][i][0];
+            *field_y = tt.y + TETROMINOSHAPES[tt.type][i][1];
             break;
         case 1:
-            *field_x = tetromino_x - TETROMINOSHAPES[tetromino_type][i][1];
-            *field_y = tetromino_y + TETROMINOSHAPES[tetromino_type][i][0];
+            *field_x = tt.x - TETROMINOSHAPES[tt.type][i][1];
+            *field_y = tt.y + TETROMINOSHAPES[tt.type][i][0];
             break;
         case 2:
-            *field_x = tetromino_x - TETROMINOSHAPES[tetromino_type][i][0];
-            *field_y = tetromino_y - TETROMINOSHAPES[tetromino_type][i][1];
+            *field_x = tt.x - TETROMINOSHAPES[tt.type][i][0];
+            *field_y = tt.y - TETROMINOSHAPES[tt.type][i][1];
             break;
         case 3:
-            *field_x = tetromino_x + TETROMINOSHAPES[tetromino_type][i][1];
-            *field_y = tetromino_y - TETROMINOSHAPES[tetromino_type][i][0];
+            *field_x = tt.x + TETROMINOSHAPES[tt.type][i][1];
+            *field_y = tt.y - TETROMINOSHAPES[tt.type][i][0];
             break;
     }
 }
 
-void draw_tetromino(int tetromino_type, int tetromino_x, int tetromino_y, int tetromino_rot) {
-    attron(COLOR_PAIR(tetromino_type + 1));
-    int x = tetromino_x, y = tetromino_y;
+void draw_tetromino(struct Tetromino tt) {
+    attron(COLOR_PAIR(tt.type + 1));
+    int x = tt.x, y = tt.y;
     mvaddch_into_field(y, x, '#');
     for (int i = 0; i < 3; ++i) {
-        get_field_coords_for_part(&x, &y, tetromino_type, tetromino_x, tetromino_y, tetromino_rot, i);
+        get_field_coords_for_part(&x, &y, tt, i);
         mvaddch_into_field(y, x, '#');
     }
 }
@@ -105,58 +115,58 @@ void clear_complete_lines() {
     // consecutive tetrises?
 }
 
-void solidify(int tetromino_type, int tetromino_x, int tetromino_y, int tetromino_rot) {
-    int x = tetromino_x, y = tetromino_y;
+void solidify(struct Tetromino tt) {
+    int x = tt.x, y = tt.y;
     FIELD[x][y] = '#';
-    FIELDCOLOUR[x][y] = tetromino_type + 1;
+    FIELDCOLOUR[x][y] = tt.type + 1;
     for (int i = 0; i < 3; ++i) {
-        get_field_coords_for_part(&x, &y, tetromino_type, tetromino_x, tetromino_y, tetromino_rot, i);
+        get_field_coords_for_part(&x, &y, tt, i);
         FIELD[x][y] = '#';
-        FIELDCOLOUR[x][y] = tetromino_type + 1;
+        FIELDCOLOUR[x][y] = tt.type + 1;
     }
     clear_complete_lines();
 }
 
-int move_horiz(int amt, int tetromino_type, int tetromino_x, int tetromino_y, int tetromino_rot) {
-    int x = tetromino_x + amt;
-    int y = tetromino_y;
+int move_horiz(int amt, struct Tetromino tt) {
+    // project tt by amt in x
+    tt.x += amt;
+    int x = tt.x, y = tt.y;
+
+    // and check for collisions
     if (x < 0 || x >= FIELDWIDTH || FIELD[x][y] != EMPTYCHAR)
         return 0;
     for (int i = 0; i < 3; ++i) {
-        get_field_coords_for_part(&x, &y, tetromino_type, tetromino_x + amt, tetromino_y, tetromino_rot, i);
+        get_field_coords_for_part(&x, &y, tt, i);
         if (x < 0 || x >= FIELDWIDTH || FIELD[x][y] != EMPTYCHAR)
             return 0;
     }
     return amt;
 }
 
-int move_down(int tetromino_type, int tetromino_x, int tetromino_y, int tetromino_rot) {
-    int x = tetromino_x;
-    int y = tetromino_y + 1;
-    if (y >= FIELDHEIGHT || FIELD[x][y] != EMPTYCHAR) {
-        solidify(tetromino_type, tetromino_x, tetromino_y, tetromino_rot);
+int move_down(struct Tetromino tt) {
+    ++tt.y;
+    int x = tt.x, y = tt.y;
+    if (y >= FIELDHEIGHT || FIELD[x][y] != EMPTYCHAR)
         return 0;
-    }
     for (int i = 0; i < 3; ++i) {
-        get_field_coords_for_part(&x, &y, tetromino_type, tetromino_x, tetromino_y + 1, tetromino_rot, i);
-        if (y >= FIELDHEIGHT || FIELD[x][y] != EMPTYCHAR) {
-            solidify(tetromino_type, tetromino_x, tetromino_y, tetromino_rot);
+        get_field_coords_for_part(&x, &y, tt, i);
+        if (y >= FIELDHEIGHT || FIELD[x][y] != EMPTYCHAR)
             return 0;
-        }
     }
     return 1;
 }
 
-int rotate(int tetromino_type, int tetromino_x, int tetromino_y, int tetromino_rot) {
-    int new_rot = (tetromino_rot + 1) % 4;
+int rotate(struct Tetromino tt) {
+    int old_rot = tt.rot;
+    tt.rot = (tt.rot + 1) % 4;
     // no need to check (0, 0) square
     for (int i = 0; i < 3; ++i) {
         int x, y;
-        get_field_coords_for_part(&x, &y, tetromino_type, tetromino_x, tetromino_y, new_rot, i);
+        get_field_coords_for_part(&x, &y, tt, i);
         if (x < 0 || x >= FIELDWIDTH || y < 0 || y >= FIELDHEIGHT)
-            return tetromino_rot;
+            return old_rot;
     }
-    return new_rot;
+    return tt.rot;
 }
 
 int main() {
@@ -176,39 +186,39 @@ int main() {
     }
     init_pair(8, COLOR_WHITE, COLOR_BLACK);
 
-    int tetromino_type = 0;
-    int tetromino_x, tetromino_y;
-    int tetromino_rot = 0;
+    struct Tetromino tt = {.type = 0, .x = 0, .y = 0, .rot = 0};
     bool gaming = true;
     bool new_tetromino_please = true;
     while (gaming) {
         if (new_tetromino_please) {
-            tetromino_type = rand() % 7;
-            tetromino_x = FIELDWIDTH / 2 - 2;
-            tetromino_y = 0;
-            tetromino_rot = 0;
+            tt.type = rand() % 7;
+            tt.x = FIELDWIDTH / 2 - 2;
+            tt.y = 0;
+            tt.rot = 0;
             new_tetromino_please = false;
         }
 
         clear();
         draw_field();
-        draw_tetromino(tetromino_type, tetromino_x, tetromino_y, tetromino_rot);
+        draw_tetromino(tt);
         refresh();
 
-        if (move_down(tetromino_type, tetromino_x, tetromino_y, tetromino_rot))
-            ++tetromino_y;
-        else
+        if (move_down(tt))
+            ++tt.y;
+        else {
+            solidify(tt);
             new_tetromino_please = true;
+        }
 
         switch (getch()) {
             case 'a':
-                tetromino_x += move_horiz(-1, tetromino_type, tetromino_x, tetromino_y, tetromino_rot);
+                tt.x += move_horiz(-1, tt);
                 break;
             case 'd':
-                tetromino_x += move_horiz(+1, tetromino_type, tetromino_x, tetromino_y, tetromino_rot);
+                tt.x += move_horiz(+1, tt);
                 break;
             case 'w':
-                tetromino_rot = rotate(tetromino_type, tetromino_x, tetromino_y, tetromino_rot);
+                tt.rot = rotate(tt);
                 break;
             case 'q':
                 gaming = false;

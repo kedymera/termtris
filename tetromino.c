@@ -1,6 +1,5 @@
 #include <stdint.h>
 #include <ncurses.h>
-typedef uint8_t u8;
 
 // shapes defined as the relative coordinates of the other three squares that make up the tetromino (the square at 0, 0 is assumed)
 // rotations are performed about (0, 0)
